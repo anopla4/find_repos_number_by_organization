@@ -43,7 +43,7 @@ def projects_table(data, lang):
     rows = []
     for row_index in tqdm(range(len(data))):
         row = data.iloc[row_index]
-        if row.get("error") != "":
+        if isinstance(row.get("error"), str):
             continue
         full_name = row.get("full_name").split("/")
         name = full_name[-1]
@@ -60,7 +60,7 @@ def projects_table(data, lang):
 
 
 def main():
-    path = Path("data")
+    path = Path("data/")
     rows = []
     for file in path.iterdir():
         if file.suffix == ".csv" and file.stem.startswith("output"):
@@ -123,13 +123,12 @@ def add_commit_hash(path_dir, path):
             continue
         test[key] = True
         commit_hash = projects_info[key]["commit_hash"]
-        new_row = list(row) + [commit_hash]
+        new_row = list(row[1:]) + [commit_hash]
         aug_data.append(new_row)
-
-    cols = list(data.columns) + ["Commit_hash"]
+    cols = list(data.columns[1:]) + ["Commit_hash"]
     df_aug_data = pd.DataFrame(aug_data, columns=cols)
 
-    df_aug_data.to_csv(path_dir / Path("aug_projects_info.csv"))
+    df_aug_data.to_csv(path_dir / Path("projects_commit_hash.csv"))
 
     return df_aug_data
 
@@ -192,24 +191,29 @@ def split_json_file(path):
     import os
     import json
 
-    #you need to add you path here
-    with open(path, 'r') as f1:
+    # you need to add you path here
+    with open(path, "r") as f1:
         ll = [json.loads(line.strip()) for line in f1.readlines()]
 
-        #this is the total length size of the json file
+        # this is the total length size of the json file
         print(len(ll))
 
-        #in here 2000 means we getting splits of 2000 tweets
-        #you can define your own size of split according to your need
-        size_of_the_split=2000
+        # in here 2000 means we getting splits of 2000 tweets
+        # you can define your own size of split according to your need
+        size_of_the_split = 2000
         total = len(ll) // size_of_the_split
 
-        #in here you will get the Number of splits
-        print(total+1)
+        # in here you will get the Number of splits
+        print(total + 1)
 
-        for i in tqdm(range(total+1)):
-            json.dump(ll[i * size_of_the_split:(i + 1) * size_of_the_split], open(
-                path.split(".")[0] + str(i+1) + ".json", 'w', encoding="utf8"), ensure_ascii=False, indent=True)
+        for i in tqdm(range(total + 1)):
+            json.dump(
+                ll[i * size_of_the_split : (i + 1) * size_of_the_split],
+                open(path.split(".")[0] + str(i + 1) + ".json", "w", encoding="utf8"),
+                ensure_ascii=False,
+                indent=True,
+            )
+
 
 if __name__ == "__main__":
     # main()
