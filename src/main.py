@@ -4,6 +4,7 @@ import pandas as pd
 from tqdm import tqdm
 import numpy as np
 import time
+from pprint import pprint
 
 
 def load_data(file):
@@ -42,16 +43,19 @@ def projects_table(data, lang):
     rows = []
     for row_index in tqdm(range(len(data))):
         row = data.iloc[row_index]
+        if row.get("error") != "":
+            continue
         full_name = row.get("full_name").split("/")
         name = full_name[-1]
         org = full_name[0]
+        url = row.get("url")
         frameworks = row.get("frameworks")
         libs = []
         if isinstance(frameworks, str):
             temp = frameworks.replace("[", "").replace("]", "").replace("'", "")
             if len(temp):
                 libs = temp.split(", ")
-        rows.append([name, org, lang, libs, 1, 1 if len(libs) else 0])
+        rows.append([name, org, url, lang, libs, 1, 1 if len(libs) else 0])
     return rows
 
 
@@ -62,12 +66,12 @@ def main():
         if file.suffix == ".csv" and file.stem.startswith("output"):
             data = load_data(file)
             rows += projects_table(data, file.stem.split("_")[-1])
-            # count_projects_ai_non_ai(organizations, data)
     table = pd.DataFrame(
         rows,
         columns=[
             "Name",
             "Organization",
+            "Url",
             "Language",
             "AI-libraries",
             "Count",
@@ -94,7 +98,7 @@ def main():
     filter_orgs = (
         table.where(filter)
         .dropna(axis=0)
-        .filter(items=["Name", "Organization", "Language", "AI-libraries"])
+        .filter(items=["Name", "Organization", "Url", "Language", "AI-libraries"])
         .reset_index(drop=True)
     )
     filter_orgs.to_csv("data/projects.csv")
@@ -102,5 +106,92 @@ def main():
     #     json.dump(organizations, file)
 
 
+def load_projects_info(path):
+    return pd.read_csv(path)
+
+
+def add_commit_hash(path_dir, path):
+    data = load_projects_info(path)
+
+    projects_info = merge_repos_lang_info(path_dir)
+    test = {}
+    aug_data = []
+    for p in data.index:
+        row = data.iloc[p]
+        key = row["Organization"] + "/" + row["Name"] + "_" + row["Language"]
+        if key in test:
+            continue
+        test[key] = True
+        commit_hash = projects_info[key]["commit_hash"]
+        new_row = list(row) + [commit_hash]
+        aug_data.append(new_row)
+
+    cols = list(data.columns) + ["Commit_hash"]
+    df_aug_data = pd.DataFrame(aug_data, columns=cols)
+
+    df_aug_data.to_csv(path_dir / Path("aug_projects_info.csv"))
+
+    return df_aug_data
+
+
+def add_ncloc_by_language(path, projects_path):
+    data = load_projects_info(projects_path)
+
+    aug_data = []
+    for file in path.iterdir():
+        if file.suffix == ".json" and file.stem.startswith("projects_cpp"):
+            projects_by_lang = {}
+            with open(file, "r") as fp:
+                projects_by_lang_temp = json.load(fp)
+                for p in projects_by_lang_temp:
+                    projects_by_lang[p["id"]] = p
+            for d in data.index:
+                row = data.iloc[d]
+                key = row.get("Name")
+                lang = row.get("Language")
+                if key not in projects_by_lang:
+                    print(key)
+                    continue
+                ncloc_by_language = projects_by_lang[key]["metrics"][
+                    "ncloc_by_language"
+                ][lang]
+                new_row = list(row) + [ncloc_by_language]
+                aug_data.append(new_row)
+                print(aug_data)
+                time.sleep(2)
+
+    cols = list(data.columns) + ["NCloc_by_language"]
+    df_aug_data = pd.DataFrame(aug_data, columns=cols)
+
+    df_aug_data.to_csv(path / Path("aug_projects_info_lines.csv"))
+
+    return df_aug_data
+
+
+def merge_repos_lang_info(path):
+    projects_info = {}
+    sum_ = 0
+    for file in path.iterdir():
+        if file.suffix == ".json" and file.stem.startswith("repos"):
+            lang = file.stem.split("_")[-1]
+            projects_lang_info = None
+            with open(file, "r") as fp:
+                projects_lang_info = json.load(fp)
+            sum_ += len(projects_lang_info)
+            for pi in projects_lang_info:
+                if "url" in pi:
+                    if (pi["full_name"] + "_" + lang) in projects_info:
+                        print(pi["full_name"])
+                    projects_info[pi["full_name"] + "_" + lang] = pi
+    return projects_info
+
+
 if __name__ == "__main__":
-    main()
+    # main()
+    # merge_repos_lang_info(Path("data/"))
+    # d = add_commit_hash(Path("data/"), Path("data/projects_info.csv"))
+    # data = None
+    # with open("data/projects_cpp.json", "r") as fp:
+    #     data = json.load(fp)
+    # pprint(data[1])
+    d = add_ncloc_by_language(Path("data/"), Path("data/aug_projects_info.csv"))
