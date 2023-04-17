@@ -157,8 +157,6 @@ def add_ncloc_by_language(path, projects_path):
                 ][lang]
                 new_row = list(row) + [ncloc_by_language]
                 aug_data.append(new_row)
-                print(aug_data)
-                time.sleep(2)
 
     cols = list(data.columns) + ["NCloc_by_language"]
     df_aug_data = pd.DataFrame(aug_data, columns=cols)
