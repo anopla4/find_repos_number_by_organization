@@ -135,11 +135,13 @@ def add_commit_hash(path_dir, path):
 
 
 def add_ncloc_by_language(path, projects_path):
+    print("Loading projects info...")
     data = load_projects_info(projects_path)
-
     aug_data = []
+    mask = [1 for _ in range(len(data))]
     for file in path.iterdir():
-        if file.suffix == ".json" and file.stem.startswith("projects_cpp"):
+        if file.suffix == ".json" and file.stem.startswith("projects"):
+            print(f"Loading {file.stem}...")
             projects_by_lang = {}
             with open(file, "r") as fp:
                 projects_by_lang_temp = json.load(fp)
@@ -150,17 +152,17 @@ def add_ncloc_by_language(path, projects_path):
                 key = row.get("Name")
                 lang = row.get("Language")
                 if key not in projects_by_lang:
-                    print(key)
                     continue
+                mask[d] = 0
                 ncloc_by_language = projects_by_lang[key]["metrics"][
                     "ncloc_by_language"
                 ][lang]
-                new_row = list(row) + [ncloc_by_language]
+                new_row = list(row[1:]) + [ncloc_by_language]
                 aug_data.append(new_row)
-                print(aug_data)
-                time.sleep(2)
-
-    cols = list(data.columns) + ["NCloc_by_language"]
+                # print(aug_data)
+                # time.sleep(2)
+    print(sum(mask))
+    cols = list(data.columns[1:]) + ["NCloc_by_language"]
     df_aug_data = pd.DataFrame(aug_data, columns=cols)
 
     df_aug_data.to_csv(path / Path("aug_projects_info_lines.csv"))
@@ -186,12 +188,36 @@ def merge_repos_lang_info(path):
     return projects_info
 
 
+def split_json_file(path):
+    import os
+    import json
+
+    #you need to add you path here
+    with open(path, 'r') as f1:
+        ll = [json.loads(line.strip()) for line in f1.readlines()]
+
+        #this is the total length size of the json file
+        print(len(ll))
+
+        #in here 2000 means we getting splits of 2000 tweets
+        #you can define your own size of split according to your need
+        size_of_the_split=2000
+        total = len(ll) // size_of_the_split
+
+        #in here you will get the Number of splits
+        print(total+1)
+
+        for i in tqdm(range(total+1)):
+            json.dump(ll[i * size_of_the_split:(i + 1) * size_of_the_split], open(
+                path.split(".")[0] + str(i+1) + ".json", 'w', encoding="utf8"), ensure_ascii=False, indent=True)
+
 if __name__ == "__main__":
     # main()
     # merge_repos_lang_info(Path("data/"))
     # d = add_commit_hash(Path("data/"), Path("data/projects_info.csv"))
+    # split_json_file("data/projects_cpp.json")
     # data = None
     # with open("data/projects_cpp.json", "r") as fp:
     #     data = json.load(fp)
-    # pprint(data[1])
-    d = add_ncloc_by_language(Path("data/"), Path("data/aug_projects_info.csv"))
+    # pprint([d["id"] for d in data if d["id"].startswith("impact-of-compiler-warnings")][0])
+    d = add_ncloc_by_language(Path("data/"), Path("data/projects_commit_hash.csv"))
