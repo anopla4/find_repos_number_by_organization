@@ -138,10 +138,10 @@ def add_ncloc_by_language(path, projects_path):
     data = load_projects_info(projects_path)
     print(len(data))
     aug_data = []
-    mask = [1 for _ in range(len(data))]
     for file in path.iterdir():
         if file.suffix == ".json" and file.stem.startswith("projects"):
             print(f"Loading {file.stem}...")
+            file_lang = file.stem.split("_")[-1]
             projects_by_lang = {}
             with open(file, "r") as fp:
                 projects_by_lang_temp = json.load(fp)
@@ -151,17 +151,13 @@ def add_ncloc_by_language(path, projects_path):
                 row = data.iloc[d]
                 key = row.get("Name")
                 lang = row.get("Language")
-                if key not in projects_by_lang:
+                if key not in projects_by_lang or file_lang != lang:
                     continue
-                mask[d] = 0
                 ncloc_by_language = projects_by_lang[key]["metrics"][
                     "ncloc_by_language"
                 ][lang]
                 new_row = list(row[1:]) + [ncloc_by_language]
                 aug_data.append(new_row)
-                # print(aug_data)
-                # time.sleep(2)
-    print(sum(mask))
     cols = list(data.columns[1:]) + ["NCloc_by_language"]
     df_aug_data = pd.DataFrame(aug_data, columns=cols)
 
