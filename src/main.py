@@ -136,6 +136,7 @@ def add_commit_hash(path_dir, path):
 def add_ncloc_by_language(path, projects_path):
     print("Loading projects info...")
     data = load_projects_info(projects_path)
+    print(len(data))
     aug_data = []
     mask = [1 for _ in range(len(data))]
     for file in path.iterdir():
@@ -188,9 +189,6 @@ def merge_repos_lang_info(path):
 
 
 def split_json_file(path):
-    import os
-    import json
-
     # you need to add you path here
     with open(path, "r") as f1:
         ll = [json.loads(line.strip()) for line in f1.readlines()]
@@ -218,7 +216,7 @@ def split_json_file(path):
 if __name__ == "__main__":
     # main()
     # merge_repos_lang_info(Path("data/"))
-    # d = add_commit_hash(Path("data/"), Path("data/projects_info.csv"))
+    # d = add_commit_hash(Path("data/"), Path("data/projects.csv"))
     # split_json_file("data/projects_cpp.json")
     # data = None
     # with open("data/projects_cpp.json", "r") as fp:
